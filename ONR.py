@@ -1,106 +1,65 @@
 import json
-
 import os, cv2
-
 from PIL import Image
-
 import numpy as np
-
 import json
-
 import os, cv2
-
 from scipy.stats import pearsonr
-
 import random
-
-train_json = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/train1/train.json'
-test_json = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/test1/test.json'
-val_json = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/val1/val.json'
-test_path = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/test1/test_image/'
-val_path = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/val1/val_image/'
-train_path = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/train1//train_image/'
-
-#hrsid
-train_json1 = '/media/ExtDisk/yxt/HRSID/annotations/train2017.json'
-test_json1 = '/media/ExtDisk/yxt/HRSID/annotations/test2017.json'
-train_path1 = '/media/ExtDisk/yxt/HRSID/train_image/'
-test_path1 = '/media/ExtDisk/yxt/HRSID/test_image/'
+"""Enter your own file path"""
+train_json = '/media/..../train.json'
+test_json = '/media/..../test.json'
+val_json = '/media/..../val.json'
+test_path = '/media/..../test_image/'
+val_path = '/media/..../val_image/'
+train_path = '/media/..../train_image/'
 
 def getFileList(dir, Filelist, ext=None):
     """
-
-    获取文件夹及其子文件夹中文件列表
-
-    输入 dir：文件夹根目录
-
-    输入 ext: 扩展名
-
-    返回： 文件路径列表
-
+    Obtain a list of files in the folder and its subfolders. 
+    Input dir: Folder root directory. 
+    Input ext: Extension. 
+    Return: File path list
     """
-
     newDir = dir
-
     if os.path.isfile(dir):
-
         if ext is None:
-
             Filelist.append(dir)
-
         else:
-
             if ext in dir[-3:]:
                 Filelist.append(dir)
-
-
-
     elif os.path.isdir(dir):
-
         for s in os.listdir(dir):
             newDir = os.path.join(dir, s)
-
             getFileList(newDir, Filelist, ext)
 
     return Filelist
 
-
+"""Calculate Euclidean distance"""
 def embedding_distance(feature_1, feature_2):
     feature_1 = np.array(feature_1)
-
     feature_2 = np.array(feature_2)
-
     dist = np.linalg.norm(feature_1 - feature_2)
-
     return dist
 
-
+"""function f(x)"""
 def sigmoid_bianhua(x, p1):
     p = (np.log((1 / 0.99) - 1) + 6) / (p1)
-
     x = p * (x)
-
     x = x - 6
-
     return 1 / (1 + np.exp(x))  # sigmoid函数
 
-
+"""Normalization function"""
 def guiyihua(p, max, min):
     d = p - min
-
     s = max - min
-
     d = d / s
-
     return (1 - d)
-
 
 def listcaculate(u1, d1):
     f = []
-
     for i in range(0, len(u1)):
         f.append(int(u1[i]) - int(d1[i]))
-
     return f
 
 
@@ -116,12 +75,11 @@ def visualization_bbox1(num_image, json_path, img_path):
         num_small = 0
         img = Image.open(image_path)
         img_array = np.array(img)  # 把图像转成数组格式img = np.asarray(image)
-
         dscore = []
         cscore = []
         last_score = []
         shape = img_array.shape
-
+        
         for i in range(shape[0] * shape[1]):
             dscore.append(0)
 
@@ -158,31 +116,24 @@ def visualization_bbox1(num_image, json_path, img_path):
 
                 if y2 >= shape[0]:
                     y2 = shape[0] - 1
-
-                # 修改中心点颜色
-                print("x1,y1:", max(w / 2, h / 2), x1, y1, shape[0], shape[1])
                 img_array[int(y1), int(x1)] = (255, 255, 255)
                 center = (int(y1), int(x1))
-                # 得到集合Y
-
+                
                 for i in range(int(y), int(y2)):
                     for j in range(int(x), int(x2)):
                         c = embedding_distance(list(img_array[int(y1), int(x1)]), list(img_array[int(i), int(j)]))
                         if c < max(w / 2, h / 2):
                             point.append([i, j])
-
-                            # img_array[i,j]=(255,0,0)
-
-                # 计算每个像素点与中心点的距离
-
+                            
+                # Calculate the distance between each pixel point and the center point
                 for i in range(0, shape[1]):
                     for j in range(0, shape[0]):
-                        # i是纵坐标，j是横坐标
+                        # i is the vertical coordinate, j is the horizontal coordinate
                         dis = embedding_distance([y1, x1], [j, i])
                         # print(dis)
                         distance.append([dis, [j, i]])
 
-                # 计算距离分数
+                # Calculate Distance score
                 R = max(w / 2, h / 2)
                 r1 = 1.5 * R
                 for i in range(0, len(distance)):
@@ -218,7 +169,7 @@ def visualization_bbox1(num_image, json_path, img_path):
                     cor = [[1, p_rg, p_rb], [p_rg, 1, p_gb], [p_rb, p_gb, 1]]
                     corr.append(np.array(cor))
                 print(corr[0])
-
+                #Calculate Color Difference Fraction
                 for i in range(0, len(x_Y)):
                     a = np.dot(np.array(x_Y[i]), corr[i])
                     a = np.dot(a, np.transpose(a))
@@ -235,42 +186,27 @@ def visualization_bbox1(num_image, json_path, img_path):
                     z = (1 / z1) * z
                     z = np.sqrt(z)
                     cscore1.append(z)
-
-                print("cscore1",max(cscore1), min(cscore1))
-
-                print("daxiao",len(cscore1), shape[0] * shape[1], len(distance))
-
+                    
                 for i in range(0, len(cscore1)):
-
-                    #if dscore[i] >= 0.94 and dscore[i] <= 1:
                     if dscore[i] >= 0 and dscore[i] <= 1:
                         if (guiyihua(cscore1[i], max(cscore1), min(cscore1))) > cscore[i]:
                             cscore[i] = guiyihua(cscore1[i], max(cscore1), min(cscore1))
 
-                        # print(i)
-
-                print("d",max(dscore), min(dscore))
-
         alpha = 0.7
-
         if num_small / num_bbox != 0:
             b = 0
         else:
             b = 1 #no have small targets
         a = 0.94
         theta = a
-        print("a:", theta,b)
-
+        #0.94 and 0.97 represent f (C1R) and f (C2R), respectively, and are hyperparameters
         for i in range(0, len(distance)):
             if b==1 :
               if dscore[i] <= 0.94:
                 last_score[i] = 0
               elif dscore[i] >= 0.97 and dscore[i] <=1:
-              #if dscore[i] >= 0.97 and dscore[i] <= 1:
                   last_score[i] = alpha * dscore[i] + (1 - alpha) * cscore[i]
-                  #print("score:",dscore[i],last_score[i])
               else:
-              #elif dscore[i] >=0 and dscore[i] < 0.97:
                   last_score[i] = (1 - alpha) * dscore[i] + alpha * (1 - cscore[i])
                   print("score:", dscore[i], last_score[i])
             else:
@@ -285,19 +221,13 @@ def visualization_bbox1(num_image, json_path, img_path):
             if last_score[i] == 0:
                 img_array[(distance[i][1])[0], (distance[i][1])[1]] = (0, 0, 0)
         img2 = Image.fromarray(np.uint8(img_array))
-        #img2.save("/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/val1/ONLYCOLOR/" + str(image_name).zfill(5), 'png')
-        cv2.imwrite("/media/ExtDisk/yxt/HRSID/ONLYCOLOR/" + str(image_name).zfill(5),img_array)
+        cv2.imwrite("/media/..../train_image/" + str(image_name).zfill(5),img_array)
 
 if __name__ == "__main__":
-
     d = 0
-
-    #org_img_folder = '/media/ExtDisk/yxt/ssdd_coco-20221019/ssdd_coco/val1/val_image/'
-    org_img_folder = '/media/ExtDisk/yxt/HRSID/test_image/'
+    org_img_folder = '/media/..../train_image/'
     imglist = getFileList(org_img_folder, [], 'jpg')
-
     for imgpath in imglist:
         d = d + 1
         visualization_bbox1(d, test_json1, test_path1)
         # print(d)
-        # 距离加色差
